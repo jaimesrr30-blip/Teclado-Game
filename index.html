@@ -110,12 +110,12 @@ h3.section-title{margin:0 0 10px; font-size:1rem; color:var(--accent); display:f
   box-shadow: 0 1px 0 var(--ks,#14161b), 0 2px 5px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14);
 }
 .key.locked{ filter:grayscale(1) brightness(.55); cursor:not-allowed; }
-.lock-icon, .fav-icon{ display:none; }
+.lock-icon, .fav-icon, .cost-tag{ display:none; }
 .key.locked .lock-icon{
   display:block; position:absolute; top:1px; right:2px; font-size:calc(var(--u)*.26); opacity:.85; z-index:3;
 }
 .key.locked .cost-tag{
-  position:absolute; bottom:-1px; font-size:calc(var(--u)*.2); color:#ffd27a; background:rgba(0,0,0,.55);
+  display:block; position:absolute; bottom:-1px; font-size:calc(var(--u)*.2); color:#ffd27a; background:rgba(0,0,0,.55);
   padding:0 4px; border-radius:5px; white-space:nowrap; left:50%; transform:translateX(-50%); z-index:3;
 }
 .key.affordable{ animation:affordPulse 1.6s ease-in-out infinite; }
