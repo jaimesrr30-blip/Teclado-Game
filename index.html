@@ -30,16 +30,50 @@ body::before{
   background:repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px);
   mix-blend-mode:overlay;
 }
-body.bg-aurora{background:radial-gradient(circle at 30% 10%,#0f2a3a,#050208 65%),radial-gradient(circle at 88% 108%, rgba(43,249,255,.12), transparent 45%);}
-body.bg-neon{background:radial-gradient(circle at 70% 0%,#3a0a3a,#050208 60%),radial-gradient(circle at 12% -10%, rgba(255,43,214,.2), transparent 45%);}
-body.bg-espacio{background:
-  radial-gradient(2px 2px at 10% 20%, #fff, transparent),
-  radial-gradient(1px 1px at 80% 40%, #fff, transparent),
-  radial-gradient(1.5px 1.5px at 50% 80%, #fff, transparent),
-  radial-gradient(1px 1px at 30% 60%, #fff, transparent),
-  radial-gradient(circle at 50% 20%, #1a1440, #05050a 70%);}
-body.bg-dorado{background:radial-gradient(circle at 50% -10%, #3a2a10, #050208 65%);}
-body.bg-arcano{background:radial-gradient(circle at 20% 100%, #2a0a3a, #050208 60%),radial-gradient(circle at 80% 0%, #0a1a3a, transparent 60%);}
+/* ----- Keyboard case skins (applied to #keyboard-wrap, not the page background) ----- */
+#keyboard-wrap.skin-floral{
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,182,213,.28), transparent 42%),
+    radial-gradient(circle at 82% 75%, rgba(180,255,190,.22), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(255,230,160,.15), transparent 50%),
+    linear-gradient(160deg, #2a1f2e, #1a2a1c);
+}
+#keyboard-wrap.skin-madera{
+  background:
+    repeating-linear-gradient(95deg, rgba(0,0,0,.12) 0 3px, transparent 3px 26px),
+    radial-gradient(circle at 30% 60%, rgba(120,70,30,.25), transparent 55%),
+    linear-gradient(160deg, #6b3f1c, #3a2008);
+}
+#keyboard-wrap.skin-ciberpunk{
+  background:
+    repeating-linear-gradient(0deg, rgba(43,249,255,.07) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,43,214,.07) 0 1px, transparent 1px 24px),
+    linear-gradient(160deg, #0a0614, #050208);
+}
+#keyboard-wrap.skin-marmol{
+  background:
+    linear-gradient(125deg, transparent 40%, rgba(150,160,180,.25) 41%, transparent 43%),
+    linear-gradient(70deg, transparent 60%, rgba(150,160,180,.18) 61%, transparent 64%),
+    linear-gradient(160deg, #e9e9ee, #b9bcc6);
+}
+#keyboard-wrap.skin-marmol .key-label{ text-shadow:0 0 3px #000, 0 0 7px rgba(0,0,0,.8), 0 1px 1px #000; }
+#keyboard-wrap.skin-espacial{
+  background:
+    radial-gradient(2px 2px at 12% 22%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 78% 38%, #fff, transparent),
+    radial-gradient(1.6px 1.6px at 48% 78%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 30% 58%, #fff, transparent),
+    radial-gradient(circle at 50% 30%, #1a1440, #05050a 70%);
+}
+#keyboard-wrap.skin-dorado{
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,223,120,.3), transparent 45%),
+    radial-gradient(circle at 75% 80%, rgba(255,190,60,.2), transparent 50%),
+    linear-gradient(160deg, #3a2a10, #1a1206);
+}
+#skin-deco{ position:absolute; inset:0; pointer-events:none; overflow:hidden; border-radius:18px; z-index:0; }
+.skin-deco-item{ position:absolute; opacity:.5; filter:blur(.2px) drop-shadow(0 0 6px rgba(0,0,0,.3)); animation:overlayFloat 5s ease-in-out infinite; }
+#keyboard{ position:relative; z-index:1; }
 
 #app{max-width:1500px;margin:0 auto;padding:16px 16px 48px; position:relative; z-index:1;}
 #topbar{
@@ -121,6 +155,16 @@ h3.section-title{margin:0 0 10px; font-size:1rem; color:var(--neon-cyan); displa
 .key.pressed{
   transform:translateY(4px);
   box-shadow: 0 1px 0 var(--ks,#14161b), 0 2px 5px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14);
+}
+.key.anim-bounce{ animation:bouncePress .38s ease; }
+@keyframes bouncePress{ 0%{transform:translateY(0);} 35%{transform:translateY(7px);} 60%{transform:translateY(-3px);} 80%{transform:translateY(2px);} 100%{transform:translateY(4px);} }
+.key.anim-shake{ animation:shakePress .32s ease; }
+@keyframes shakePress{ 0%,100%{transform:translateY(4px) rotate(0deg);} 25%{transform:translateY(4px) rotate(-7deg);} 50%{transform:translateY(4px) rotate(6deg);} 75%{transform:translateY(4px) rotate(-3deg);} }
+.key.anim-flash{ animation:flashPress .28s ease; }
+@keyframes flashPress{ 0%{filter:brightness(1);} 45%{filter:brightness(1.9);} 100%{filter:brightness(1);} }
+.key-ripple{
+  position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%;
+  background:rgba(255,255,255,.6); pointer-events:none; z-index:5;
 }
 .key.locked{ filter:grayscale(1) brightness(.55); cursor:not-allowed; }
 .lock-icon, .fav-icon, .cost-tag, .key-overlay{ display:none; }
@@ -315,6 +359,9 @@ body.shaking #app{animation: screenShake .5s ease;}
 .style-card.locked{filter:brightness(.35) grayscale(1);}
 .style-card.locked .n{color:#666;}
 .style-card .count-badge{position:absolute; bottom:3px; right:4px; font-size:.58rem; background:rgba(0,0,0,.6); padding:1px 5px; border-radius:6px;}
+.style-card .copies-badge{position:absolute; bottom:3px; left:4px; font-size:.55rem; background:rgba(0,0,0,.6); padding:1px 5px; border-radius:6px; color:var(--good);}
+.style-card.unavailable{ filter:brightness(.45) grayscale(.6); cursor:not-allowed; }
+.style-card.unavailable .copies-badge{ color:var(--bad); }
 
 /* ---------- Missions/Achievements ---------- */
 .cards-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px;}
@@ -408,7 +455,7 @@ body.shaking #app{animation: screenShake .5s ease;}
   <main id="page-container">
 
     <section class="page active" id="page-keyboard">
-      <div id="keyboard-wrap"><div id="keyboard"></div></div>
+      <div id="keyboard-wrap"><div id="skin-deco"></div><div id="keyboard"></div></div>
       <div id="quick-stats-strip"></div>
     </section>
 
@@ -430,7 +477,7 @@ body.shaking #app{animation: screenShake .5s ease;}
         <div class="shop-col card"><h3 class="section-title">🔑 Próximas Teclas</h3><div class="shop-section" id="shop-keys"></div></div>
         <div class="shop-col card"><h3 class="section-title">⬆️ Mejoras</h3><div class="shop-section" id="shop-upgrades"></div></div>
         <div class="shop-col card">
-          <h3 class="section-title">🎨 Fondos</h3><div class="shop-section" id="shop-bgs"></div>
+          <h3 class="section-title">🧩 Teclados</h3><div class="shop-section" id="shop-skins"></div>
           <h3 class="section-title">✨ Animaciones</h3><div class="shop-section" id="shop-anims"></div>
         </div>
       </div>
@@ -798,7 +845,7 @@ function defaultState(){
     favStyles: [],
     missionsClaimed: [],
     achievementsUnlocked: [],
-    ownedBackgrounds: ['default'], activeBackground:'default',
+    ownedSkins: ['default'], activeSkin:'default',
     ownedAnimations: ['classic'], activeAnimation:'classic',
     soundMuted:false,
     lastSave: Date.now(),
@@ -825,6 +872,14 @@ function saveGame(){
 
 function isOwned(styleId){ return !!(state.styles[styleId] && state.styles[styleId].owned); }
 function ownedStyleList(){ return STYLES.filter(s=>isOwned(s.id)); }
+function copiesInUseExcluding(styleId, excludeCode){
+  return Object.entries(state.keys).filter(([code,k])=>code!==excludeCode && k.unlocked && k.styleId===styleId).length;
+}
+function availableCopies(styleId, excludeCode){
+  const rec = state.styles[styleId];
+  const total = rec ? rec.timesObtained : 0;
+  return total - copiesInUseExcluding(styleId, excludeCode);
+}
 function getStyle(id){ if(id==='default') return DEFAULT_STYLE; return STYLE_MAP[id]; }
 
 /* ============================= ECONOMY / UPGRADES ============================= */
@@ -845,18 +900,23 @@ function luckFactor(){ return 1 + state.upgrades.luck*0.15; }
 function rollCost(){ return Math.max(5, Math.round(25 * Math.pow(0.9, state.upgrades.rollDiscount))); }
 function maxFavSlots(){ return 5 + state.upgrades.favSlots*3; }
 
-const BACKGROUNDS = [
-  {id:'default', label:'Neón', cost:0, cls:''},
-  {id:'aurora', label:'Aurora', cost:500, cls:'bg-aurora'},
-  {id:'neon', label:'Sintetizador', cost:2000, cls:'bg-neon'},
-  {id:'espacio', label:'Espacio', cost:8000, cls:'bg-espacio'},
-  {id:'dorado', label:'Dorado', cost:30000, cls:'bg-dorado'},
-  {id:'arcano', label:'Arcano', cost:100000, cls:'bg-arcano'},
+const KEYBOARD_SKINS = [
+  {id:'default', label:'Neón', cost:0, cls:'', keyColor:['#3a3f4b','#20232d','#14161b'], decor:[]},
+  {id:'floral', label:'Teclado Floral 🌸', cost:800, cls:'skin-floral', keyColor:['#5a4a52','#2e2530','#171015'],
+    decor:[['🌸',6,10,1.4],['🌿',90,14,1.1],['🌷',14,86,1.2],['🌼',82,84,1.3],['🍃',48,6,1],['🌸',60,92,1.2]]},
+  {id:'madera', label:'Teclado de Madera 🪵', cost:1500, cls:'skin-madera', keyColor:['#8a5a2a','#4a2c10','#2a1806'], decor:[]},
+  {id:'ciberpunk', label:'Teclado Cyberpunk', cost:4000, cls:'skin-ciberpunk', keyColor:['#123a42','#061a1e','#020c0e'], decor:[]},
+  {id:'marmol', label:'Teclado de Mármol', cost:10000, cls:'skin-marmol', keyColor:['#d8dae2','#a8adb8','#7a7f8a'], decor:[]},
+  {id:'espacial', label:'Teclado Espacial 🌌', cost:25000, cls:'skin-espacial', keyColor:['#2a2560','#141033','#08061a'],
+    decor:[['⭐',8,12,1],['🪐',88,16,1.4],['☄️',50,84,1.2],['⭐',24,88,.9],['⭐',70,8,.9]]},
+  {id:'dorado', label:'Teclado Dorado 👑', cost:60000, cls:'skin-dorado', keyColor:['#8a6a1a','#4a3408','#241a04'], decor:[]},
 ];
 const ANIMATIONS = [
-  {id:'classic', label:'Clásica', cost:0},
-  {id:'bounce', label:'Rebote', cost:1500},
-  {id:'ripple', label:'Ondas', cost:5000},
+  {id:'classic', label:'Clásica', cost:0, desc:'Hundimiento simple'},
+  {id:'bounce', label:'Rebote', cost:800, desc:'La tecla rebota al pulsarla'},
+  {id:'ripple', label:'Ondas', cost:1500, desc:'Una onda se expande desde el centro'},
+  {id:'shake', label:'Sacudida', cost:2500, desc:'La tecla se sacude al pulsarla'},
+  {id:'flash', label:'Destello', cost:4000, desc:'Un destello de luz ilumina la tecla'},
 ];
 
 /* ============================= GACHA ============================= */
@@ -1047,7 +1107,8 @@ function applyKeyVisual(el, code){
   el.setAttribute('data-rarity', style.rarity);
   el.style.setProperty('--glow', color);
   if(style.isDefault){
-    el.style.setProperty('--kt', '#3a3f4b'); el.style.setProperty('--kb', '#20232d'); el.style.setProperty('--ks', '#14161b');
+    const kc = currentSkin().keyColor;
+    el.style.setProperty('--kt', kc[0]); el.style.setProperty('--kb', kc[1]); el.style.setProperty('--ks', kc[2]);
   } else {
     el.style.setProperty('--kt', shade(color, 18));
     el.style.setProperty('--kb', shade(color, -35));
@@ -1173,15 +1234,19 @@ function openStylePicker(code){
     grid.innerHTML = '';
     const owned = [DEFAULT_STYLE, ...ownedStyleList()];
     owned.filter(s=>!filter || s.name.toLowerCase().includes(filter.toLowerCase())).forEach(s=>{
+      const avail = s.isDefault ? Infinity : availableCopies(s.id, code);
+      const unavailable = avail<=0;
       const card = document.createElement('div');
-      card.className = 'style-card'; card.style.setProperty('--c', rarityColor(s.rarity));
-      card.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span>`;
+      card.className = 'style-card'+(unavailable?' unavailable':''); card.style.setProperty('--c', rarityColor(s.rarity));
+      card.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span>`
+        + (s.isDefault? '' : `<span class="copies-badge">${unavailable?'en uso':avail+' libre'+(avail===1?'':'s')}</span>`);
       card.title = `${rarityLabel(s.rarity)} · +${s.coins}🪙`;
       card.addEventListener('click', ()=>{
+        if(unavailable){ toast('No te quedan copias libres de este estilo. ¡Consigue otra en la Ruleta!'); return; }
         state.keys[code].styleId = s.id;
         closeModals(); applyKeyVisual(keyElements[code], code);
         toast(`Equipado: ${s.emoji} ${s.name}`);
-        saveGame();
+        refreshShopAffordability(); saveGame();
       });
       grid.appendChild(card);
     });
@@ -1195,6 +1260,21 @@ function openStylePicker(code){
 
 function isTypingTarget(el){
   return el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.isContentEditable);
+}
+
+function triggerPressAnimation(el){
+  const anim = state.activeAnimation;
+  if(anim==='bounce' || anim==='shake' || anim==='flash'){
+    const cls = 'anim-'+anim;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  } else if(anim==='ripple'){
+    const r = document.createElement('span'); r.className='key-ripple';
+    el.appendChild(r);
+    r.animate([{transform:'scale(0)', opacity:1},{transform:'scale(7)', opacity:0}], {duration:450, easing:'ease-out'});
+    setTimeout(()=>r.remove(), 460);
+  }
 }
 
 window.addEventListener('keydown', e=>{
@@ -1215,6 +1295,7 @@ window.addEventListener('keydown', e=>{
   if(el){
     const rect = el.getBoundingClientRect();
     spawnParticles(rect.left+rect.width/2, rect.top+rect.height/2, style);
+    triggerPressAnimation(el);
   }
   updateCoinDisplay();
   checkMissions(); checkAchievements();
@@ -1366,21 +1447,21 @@ function refreshShopAffordability(){
     upDiv.appendChild(item);
   });
 
-  const bgDiv = document.getElementById('shop-bgs'); bgDiv.innerHTML='';
-  BACKGROUNDS.forEach(bg=>{
-    const owned = state.ownedBackgrounds.includes(bg.id);
-    const active = state.activeBackground===bg.id;
+  const skinDiv = document.getElementById('shop-skins'); skinDiv.innerHTML='';
+  KEYBOARD_SKINS.forEach(skin=>{
+    const owned = state.ownedSkins.includes(skin.id);
+    const active = state.activeSkin===skin.id;
     const item = document.createElement('div'); item.className='shop-item';
-    item.innerHTML = `<div class="info"><b>${bg.label}</b><span>${owned?(active?'Activo':'Poseído'):'Cosmético de fondo'}</span></div>
-      <button class="buy-btn ${active?'owned':''}" ${(!owned && state.coins<bg.cost)?'disabled':''}>${owned?(active?'Activo':'Usar'):bg.cost+'🪙'}</button>`;
+    item.innerHTML = `<div class="info"><b>${skin.label}</b><span>${owned?(active?'Activo':'Poseído'):'Skin de teclado completo'}</span></div>
+      <button class="buy-btn ${active?'owned':''}" ${(!owned && state.coins<skin.cost)?'disabled':''}>${owned?(active?'Activo':'Usar'):skin.cost+'🪙'}</button>`;
     item.querySelector('button').addEventListener('click', ()=>{
       if(!owned){
-        if(state.coins<bg.cost) return;
-        state.coins -= bg.cost; state.ownedBackgrounds.push(bg.id);
+        if(state.coins<skin.cost) return;
+        state.coins -= skin.cost; state.ownedSkins.push(skin.id);
       }
-      state.activeBackground = bg.id; applyBackground(); refreshAll(); saveGame();
+      state.activeSkin = skin.id; applySkin(); refreshAll(); saveGame();
     });
-    bgDiv.appendChild(item);
+    skinDiv.appendChild(item);
   });
 
   const animDiv = document.getElementById('shop-anims'); animDiv.innerHTML='';
@@ -1388,7 +1469,7 @@ function refreshShopAffordability(){
     const owned = state.ownedAnimations.includes(a.id);
     const active = state.activeAnimation===a.id;
     const item = document.createElement('div'); item.className='shop-item';
-    item.innerHTML = `<div class="info"><b>${a.label}</b><span>${owned?(active?'Activa':'Poseída'):'Animación de pulsación'}</span></div>
+    item.innerHTML = `<div class="info"><b>${a.label}</b><span>${owned?(active?'Activa':'Poseída'):a.desc}</span></div>
       <button class="buy-btn ${active?'owned':''}" ${(!owned && state.coins<a.cost)?'disabled':''}>${owned?(active?'Activa':'Usar'):a.cost+'🪙'}</button>`;
     item.querySelector('button').addEventListener('click', ()=>{
       if(!owned){
@@ -1400,10 +1481,15 @@ function refreshShopAffordability(){
     animDiv.appendChild(item);
   });
 }
-function applyBackground(){
-  const bg = BACKGROUNDS.find(b=>b.id===state.activeBackground) || BACKGROUNDS[0];
-  document.body.className = bg.cls;
+function applySkin(){
+  const skin = KEYBOARD_SKINS.find(s=>s.id===state.activeSkin) || KEYBOARD_SKINS[0];
+  document.getElementById('keyboard-wrap').className = skin.cls;
+  const deco = document.getElementById('skin-deco');
+  deco.innerHTML = skin.decor.map(([emoji,left,top,scale])=>
+    `<span class="skin-deco-item" style="left:${left}%; top:${top}%; font-size:${(1.6*scale).toFixed(2)}rem;">${emoji}</span>`
+  ).join('');
 }
+function currentSkin(){ return KEYBOARD_SKINS.find(s=>s.id===state.activeSkin) || KEYBOARD_SKINS[0]; }
 
 /* ============================= INVENTORY / COLLECTION ============================= */
 
@@ -1602,7 +1688,7 @@ document.getElementById('mute-btn').addEventListener('click', ()=>{
 function init(){
   state = loadGame();
   document.getElementById('mute-btn').textContent = state.soundMuted ? '🔇' : '🔊';
-  applyBackground();
+  applySkin();
   buildKeyboard();
   renderRarityGrid();
   populateRarityFilters();
