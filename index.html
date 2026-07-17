@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Keycap RNG</title>
+<style>
+:root{
+  --bg1:#0d0f16; --bg2:#151826; --panel:#12141e; --panel2:#1a1d2b;
+  --text:#e8eaf2; --text-dim:#9aa0b4; --accent:#7c9cff; --accent2:#ffb347;
+  --border:rgba(255,255,255,.08); --good:#5fd67a; --bad:#ff5e6e;
+  --r-comun:#b8bec8; --r-pocoComun:#5fd67a; --r-raro:#4aa3ff; --r-epico:#b465ff;
+  --r-legendario:#ffb347; --r-mitico:#ff5e9e; --r-omega:#00e5ff; --r-prohibido:#ff2b3f;
+  --r-secreto:#c65bff; --r-divino:#ffd700;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:radial-gradient(circle at 20% 0%, var(--bg2), var(--bg1) 60%);
+  color:var(--text); overflow-x:hidden; min-height:100%;
+}
+body.bg-aurora{background:radial-gradient(circle at 30% 10%,#1c2a4a,#0d0f16 65%),linear-gradient(120deg,#0d0f16,#131c33);}
+body.bg-neon{background:radial-gradient(circle at 70% 0%,#2a0f3a,#0a0a12 60%);}
+body.bg-espacio{background:
+  radial-gradient(2px 2px at 10% 20%, #fff, transparent),
+  radial-gradient(1px 1px at 80% 40%, #fff, transparent),
+  radial-gradient(1.5px 1.5px at 50% 80%, #fff, transparent),
+  radial-gradient(1px 1px at 30% 60%, #fff, transparent),
+  radial-gradient(circle at 50% 20%, #1a1440, #05050a 70%);}
+body.bg-dorado{background:radial-gradient(circle at 50% -10%, #3a2a10, #0d0f16 65%);}
+body.bg-arcano{background:radial-gradient(circle at 20% 100%, #2a0a3a, #0d0f16 60%),radial-gradient(circle at 80% 0%, #0a1a3a, transparent 60%);}
+
+#app{max-width:1400px;margin:0 auto;padding:16px 16px 40px;}
+#topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:linear-gradient(180deg, var(--panel2), var(--panel));
+  border:1px solid var(--border); border-radius:14px; padding:12px 18px; margin-bottom:16px;
+  flex-wrap:wrap;
+}
+#topbar h1{font-size:1.15rem; margin:0; letter-spacing:.5px; display:flex; gap:8px; align-items:center;}
+#coin-display{
+  font-size:1.3rem; font-weight:700; color:var(--accent2); display:flex; gap:8px; align-items:center;
+  background:rgba(255,179,71,.08); padding:6px 14px; border-radius:10px; border:1px solid rgba(255,179,71,.25);
+}
+#coin-display .coin-icon{filter:drop-shadow(0 0 4px rgba(255,179,71,.6));}
+.icon-btn{
+  background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:10px;
+  padding:8px 12px; cursor:pointer; font-size:1rem; transition:.15s;
+}
+.icon-btn:hover{background:#232741; border-color:var(--accent);}
+
+#main-layout{display:grid; grid-template-columns: 1fr 400px; gap:16px; align-items:start;}
+@media(max-width:980px){#main-layout{grid-template-columns:1fr;}}
+
+#keyboard-wrap{
+  background:linear-gradient(180deg,#181c2c,#0f1119);
+  border:1px solid var(--border); border-radius:18px; padding:22px; position:relative; overflow:hidden;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.4);
+}
+#keyboard{display:flex; flex-direction:column; gap:8px; align-items:center;}
+.kb-row{display:flex; gap:6px; justify-content:center;}
+
+.key{
+  --u: clamp(30px, 4.4vw, 46px);
+  width:calc(var(--u) * var(--w, 1) + (var(--w,1) - 1) * 6px);
+  height:var(--u);
+  border-radius:8px;
+  position:relative;
+  background: linear-gradient(160deg, var(--kt,#3a3f4b), var(--kb,#20232d));
+  box-shadow: 0 4px 0 var(--ks,#14161b), 0 6px 12px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.07);
+  display:flex; align-items:center; justify-content:center;
+  font-size:calc(var(--u) * .3);
+  font-weight:600; color:#dfe3f0; user-select:none; cursor:pointer;
+  transition:transform .05s ease, box-shadow .05s ease, filter .2s;
+  flex-shrink:0;
+}
+.key .emoji{font-size:calc(var(--u)*.42); line-height:1;}
+.key.pressed{
+  transform:translateY(4px);
+  box-shadow: 0 1px 0 var(--ks,#14161b), 0 2px 5px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14);
+}
+.key.locked{ filter:grayscale(1) brightness(.55); cursor:not-allowed; }
+.key.locked::after{
+  content:'🔒'; position:absolute; top:2px; right:3px; font-size:calc(var(--u)*.28); opacity:.85;
+}
+.key.locked .cost-tag{
+  position:absolute; bottom:-2px; font-size:calc(var(--u)*.2); color:#ffd27a; background:rgba(0,0,0,.55);
+  padding:0 4px; border-radius:5px; white-space:nowrap; left:50%; transform:translateX(-50%);
+}
+.key.affordable{ animation:affordPulse 1.6s ease-in-out infinite; }
+@keyframes affordPulse{
+  0%,100%{ box-shadow: 0 4px 0 var(--ks,#14161b), 0 6px 12px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14), 0 0 0 rgba(255,215,0,0);}
+  50%{ box-shadow: 0 4px 0 var(--ks,#14161b), 0 6px 16px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.14), 0 0 14px 2px rgba(255,215,0,.55);}
+}
+.key.favorite::before{
+  content:'⭐'; position:absolute; top:-6px; left:-4px; font-size:calc(var(--u)*.26); filter:drop-shadow(0 0 2px #000);
+}
+.key[data-rarity="pocoComun"], .key[data-rarity="raro"], .key[data-rarity="epico"],
+.key[data-rarity="legendario"], .key[data-rarity="mitico"], .key[data-rarity="omega"],
+.key[data-rarity="prohibido"], .key[data-rarity="secreto"], .key[data-rarity="divino"]{
+  animation: glowPulse 2.4s ease-in-out infinite;
+}
+@keyframes glowPulse{
+  0%,100%{ box-shadow: 0 4px 0 var(--ks), 0 6px 12px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.16), 0 0 6px 0 var(--glow, transparent); }
+  50%{ box-shadow: 0 4px 0 var(--ks), 0 8px 18px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.16), 0 0 18px 3px var(--glow, transparent); }
+}
+
+#particles-layer{position:fixed; inset:0; pointer-events:none; z-index:9990; overflow:hidden;}
+.particle{position:absolute; pointer-events:none; will-change:transform,opacity;}
+
+body.shaking #app{animation: screenShake .5s ease;}
+@keyframes screenShake{
+  0%,100%{transform:translate(0,0);} 10%{transform:translate(-6px,3px);} 20%{transform:translate(6px,-3px);}
+  30%{transform:translate(-5px,4px);} 40%{transform:translate(5px,-4px);} 50%{transform:translate(-4px,2px);}
+  60%{transform:translate(4px,-2px);} 70%{transform:translate(-3px,2px);} 80%{transform:translate(3px,-1px);} 90%{transform:translate(-1px,1px);}
+}
+
+#panel{
+  background:linear-gradient(180deg, var(--panel2), var(--panel));
+  border:1px solid var(--border); border-radius:16px; overflow:hidden; display:flex; flex-direction:column;
+  max-height:80vh;
+}
+#tabs{display:flex; flex-wrap:wrap; border-bottom:1px solid var(--border); background:rgba(0,0,0,.15);}
+.tab-btn{
+  flex:1 1 auto; background:none; border:none; color:var(--text-dim); padding:10px 6px; font-size:.78rem;
+  cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;
+}
+.tab-btn.active{color:var(--text); border-bottom-color:var(--accent); background:rgba(124,156,255,.08);}
+#panel-content{padding:14px; overflow-y:auto; flex:1;}
+#panel-content::-webkit-scrollbar{width:8px;}
+#panel-content::-webkit-scrollbar-thumb{background:#333850; border-radius:4px;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+h3.section-title{margin:0 0 10px; font-size:.95rem; color:var(--accent); display:flex; align-items:center; gap:6px;}
+.sub{color:var(--text-dim); font-size:.78rem; margin:2px 0 10px;}
+
+/* Gacha */
+#reel-container{
+  width:100%; height:100px; overflow:hidden; position:relative; background:#0a0b12; border-radius:12px;
+  border:1px solid var(--border); margin-bottom:12px;
+}
+#reel-marker{position:absolute; left:50%; top:0; bottom:0; width:2px; background:var(--accent2); z-index:2; box-shadow:0 0 8px var(--accent2);}
+#reel-strip{position:absolute; top:0; left:0; height:100%; display:flex; align-items:center; gap:8px; padding:0 8px;
+  transition:none;}
+.reel-card{
+  width:84px; height:84px; flex-shrink:0; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:linear-gradient(160deg,#242844,#14162200); border:2px solid var(--r-comun); gap:2px;
+}
+.reel-card .e{font-size:2rem;}
+.reel-card .n{font-size:.55rem; color:var(--text-dim); text-align:center; padding:0 3px;}
+#roll-btn{
+  width:100%; padding:14px; font-size:1rem; font-weight:700; border:none; border-radius:12px; cursor:pointer;
+  background:linear-gradient(135deg, var(--accent), #5a6fd8); color:#fff; box-shadow:0 4px 14px rgba(124,156,255,.35);
+  transition:.15s;
+}
+#roll-btn:hover{filter:brightness(1.1);}
+#roll-btn:disabled{opacity:.5; cursor:not-allowed;}
+.roll-cost{text-align:center; font-size:.8rem; color:var(--text-dim); margin-top:6px;}
+.rarity-table{width:100%; border-collapse:collapse; margin-top:14px; font-size:.72rem;}
+.rarity-table td,.rarity-table th{padding:4px 6px; border-bottom:1px solid var(--border); text-align:left;}
+.rarity-chip{display:inline-block; padding:1px 8px; border-radius:20px; font-weight:700; font-size:.68rem;}
+
+/* Shop */
+.shop-section{margin-bottom:18px;}
+.shop-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 10px; margin-bottom:6px;
+  background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; font-size:.82rem;
+}
+.shop-item .info{flex:1;}
+.shop-item .info b{display:block; font-size:.86rem;}
+.shop-item .info span{color:var(--text-dim); font-size:.72rem;}
+.buy-btn{
+  background:var(--accent); border:none; color:#fff; padding:7px 12px; border-radius:8px; cursor:pointer; font-weight:700; font-size:.76rem;
+  white-space:nowrap;
+}
+.buy-btn:disabled{background:#444; cursor:not-allowed; opacity:.6;}
+.buy-btn.owned{background:var(--good);}
+
+/* Inventory / Collection */
+.toolbar{display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;}
+.toolbar input, .toolbar select{
+  background:#0e0f18; border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:8px; font-size:.76rem;
+}
+.toolbar input{flex:1; min-width:100px;}
+.style-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px;}
+.style-card{
+  aspect-ratio:1; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:linear-gradient(160deg,#242844,#181a28); border:2px solid var(--c,var(--r-comun)); position:relative; padding:4px; cursor:pointer;
+  gap:2px;
+}
+.style-card .e{font-size:1.6rem;}
+.style-card .n{font-size:.58rem; text-align:center; color:var(--text-dim); line-height:1.1;}
+.style-card .fav-star{position:absolute; top:2px; right:3px; font-size:.7rem;}
+.style-card.locked{filter:brightness(.35) grayscale(1);}
+.style-card.locked .n{color:#666;}
+.style-card .count-badge{position:absolute; bottom:2px; right:3px; font-size:.55rem; background:rgba(0,0,0,.6); padding:0 4px; border-radius:6px;}
+
+/* Missions/Achievements */
+.mission-item, .ach-item{
+  background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px;
+}
+.mission-item.done, .ach-item.done{border-color:var(--good);}
+.progress-bar{height:8px; background:#181a28; border-radius:6px; overflow:hidden; margin-top:6px;}
+.progress-fill{height:100%; background:linear-gradient(90deg, var(--accent), var(--good)); transition:width .3s;}
+.claim-btn{margin-top:6px; width:100%; background:var(--good); border:none; color:#08260f; font-weight:700; padding:6px; border-radius:8px; cursor:pointer;}
+.claim-btn:disabled{background:#333; color:#888; cursor:not-allowed;}
+
+/* Stats */
+.stat-row{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:.85rem;}
+.stat-row b{color:var(--accent2);}
+
+/* Modal */
+#modal-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center;
+  z-index:9999; opacity:0; pointer-events:none; transition:opacity .18s;
+}
+#modal-overlay.show{opacity:1; pointer-events:all;}
+.modal{
+  background:linear-gradient(180deg,#1b1e2e,#12141e); border:1px solid var(--border); border-radius:16px; padding:20px;
+  width:min(92vw, 420px); max-height:85vh; overflow-y:auto; display:none; transform:scale(.92); transition:transform .18s;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+#modal-overlay.show .modal.active{display:block; transform:scale(1);}
+.modal h2{margin:0 0 12px; font-size:1.05rem; display:flex; align-items:center; gap:8px;}
+.modal-close{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer;}
+.menu-btn{
+  display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; margin-bottom:6px; background:rgba(255,255,255,.04);
+  border:1px solid var(--border); color:var(--text); border-radius:10px; cursor:pointer; font-size:.88rem; text-align:left;
+}
+.menu-btn:hover{background:rgba(124,156,255,.12); border-color:var(--accent);}
+.menu-btn.danger:hover{background:rgba(255,94,110,.15); border-color:var(--bad);}
+
+#reveal-card{ text-align:center; padding:20px 0; }
+#reveal-emoji{font-size:5rem; display:block; margin-bottom:8px; filter:drop-shadow(0 0 18px var(--glow, #fff));}
+#reveal-name{font-size:1.3rem; font-weight:800; margin-bottom:4px;}
+#reveal-rarity{font-weight:700; margin-bottom:10px; display:inline-block; padding:3px 14px; border-radius:20px;}
+#reveal-stats{color:var(--text-dim); font-size:.85rem; line-height:1.6;}
+.reveal-glow{
+  position:absolute; inset:0; border-radius:16px; pointer-events:none;
+  background:radial-gradient(circle at 50% 30%, var(--glow, transparent), transparent 70%); opacity:.35;
+}
+
+#toast-container{position:fixed; top:16px; right:16px; z-index:10000; display:flex; flex-direction:column; gap:8px; align-items:flex-end;}
+.toast{
+  background:#1b1e2e; border:1px solid var(--border); border-left:4px solid var(--accent); color:var(--text); padding:10px 16px;
+  border-radius:10px; font-size:.82rem; box-shadow:0 8px 24px rgba(0,0,0,.4); animation:toastIn .25s ease, toastOut .3s ease 3.2s forwards;
+  max-width:320px;
+}
+.toast.gold{border-left-color:var(--accent2);}
+@keyframes toastIn{from{opacity:0; transform:translateX(30px);} to{opacity:1; transform:translateX(0);}}
+@keyframes toastOut{to{opacity:0; transform:translateX(30px);}}
+
+.hidden{display:none !important;}
+.bg-swatch{width:36px; height:24px; border-radius:6px; border:2px solid var(--border); cursor:pointer; display:inline-block;}
+.bg-swatch.active{border-color:var(--accent2);}
+::selection{background:var(--accent);}
+</style>
+</head>
+<body>
+<div id="particles-layer"></div>
+<div id="app">
+  <header id="topbar">
+    <h1>⌨️ Keycap RNG</h1>
+    <div id="coin-display"><span class="coin-icon">🪙</span><span id="coin-amount">0</span></div>
+    <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="mute-btn" title="Silenciar sonido">🔊</button>
+    </div>
+  </header>
+
+  <main id="main-layout">
+    <section id="keyboard-wrap">
+      <div id="keyboard"></div>
+    </section>
+
+    <aside id="panel">
+      <nav id="tabs">
+        <button class="tab-btn active" data-tab="gacha">🎰 Ruleta</button>
+        <button class="tab-btn" data-tab="shop">🛒 Tienda</button>
+        <button class="tab-btn" data-tab="inventory">🎒 Inventario</button>
+        <button class="tab-btn" data-tab="collection">📖 Colección</button>
+        <button class="tab-btn" data-tab="missions">🎯 Misiones</button>
+        <button class="tab-btn" data-tab="achievements">🏆 Logros</button>
+        <button class="tab-btn" data-tab="stats">📊 Stats</button>
+      </nav>
+      <div id="panel-content">
+        <div class="tab-pane active" id="tab-gacha">
+          <h3 class="section-title">🎰 Ruleta de Estilos</h3>
+          <p class="sub">Gasta monedas por una oportunidad de conseguir un nuevo Keycap. ¡Una tirada más...!</p>
+          <div id="reel-container"><div id="reel-marker"></div><div id="reel-strip"></div></div>
+          <button id="roll-btn">TIRAR</button>
+          <div class="roll-cost" id="roll-cost-label"></div>
+          <table class="rarity-table" id="rarity-table"></table>
+        </div>
+        <div class="tab-pane" id="tab-shop"></div>
+        <div class="tab-pane" id="tab-inventory">
+          <div class="toolbar">
+            <input type="text" id="inv-search" placeholder="Buscar estilo...">
+            <select id="inv-sort">
+              <option value="rarity">Rareza</option>
+              <option value="name">Nombre</option>
+              <option value="coins">Monedas</option>
+              <option value="date">Fecha</option>
+              <option value="prob">Probabilidad</option>
+            </select>
+          </div>
+          <div class="toolbar">
+            <select id="inv-filter">
+              <option value="all">Todas las rarezas</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:4px;font-size:.76rem;"><input type="checkbox" id="inv-fav-only"> ★ favoritos</label>
+          </div>
+          <div class="style-grid" id="inventory-grid"></div>
+        </div>
+        <div class="tab-pane" id="tab-collection">
+          <div class="sub" id="collection-progress"></div>
+          <div class="toolbar">
+            <select id="col-filter"><option value="all">Todas las rarezas</option></select>
+          </div>
+          <div class="style-grid" id="collection-grid"></div>
+        </div>
+        <div class="tab-pane" id="tab-missions"><h3 class="section-title">🎯 Misiones</h3><div id="missions-list"></div></div>
+        <div class="tab-pane" id="tab-achievements"><h3 class="section-title">🏆 Logros</h3><div id="achievements-list"></div></div>
+        <div class="tab-pane" id="tab-stats"><h3 class="section-title">📊 Estadísticas</h3><div id="stats-list"></div></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="modal-overlay">
+  <div class="modal" id="modal-key-menu" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <h2 id="km-title">Tecla</h2>
+    <button class="menu-btn" id="km-change-style">🎨 Cambiar estilo</button>
+    <button class="menu-btn" id="km-sell">💰 Vender tecla</button>
+    <button class="menu-btn" id="km-stats">📊 Ver estadísticas</button>
+    <button class="menu-btn" id="km-fav">⭐ Añadir a favoritos</button>
+  </div>
+
+  <div class="modal" id="modal-style-picker" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <h2>🎨 Elegir estilo</h2>
+    <div class="toolbar"><input type="text" id="picker-search" placeholder="Buscar..."></div>
+    <div class="style-grid" id="picker-grid"></div>
+  </div>
+
+  <div class="modal" id="modal-key-stats" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <h2 id="ks-title">Estadísticas</h2>
+    <div id="ks-body"></div>
+  </div>
+
+  <div class="modal" id="modal-reveal" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <div class="reveal-glow" id="reveal-glow"></div>
+    <div id="reveal-card">
+      <span id="reveal-emoji">✨</span>
+      <div id="reveal-name">???</div>
+      <span id="reveal-rarity">Común</span>
+      <div id="reveal-stats"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-confirm" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <h2 id="confirm-title">¿Confirmar?</h2>
+    <p id="confirm-body" class="sub"></p>
+    <button class="menu-btn danger" id="confirm-yes">Sí, confirmar</button>
+    <button class="menu-btn" data-close>Cancelar</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================= DATA ============================= */
+
+const THEMES = [
+['☁️','Nubes'],['🔥','Fuego'],['❄️','Hielo'],['⚡','Rayos'],['🌸','Sakura'],
+['🌌','Galaxia'],['🌊','Océano'],['💎','Cristal'],['🌈','Arcoíris'],['🌿','Naturaleza'],
+['🌋','Lava'],['⚙️','Mecánico'],['☢️','Nuclear'],['👻','Fantasma'],['🌙','Luna'],
+['⭐','Estrellas'],['🪐','Planetas'],['☀️','Sol'],['🐉','Dragón'],['⚫','Vacío'],
+['🌪️','Tornado'],['⛈️','Tormenta'],['🏜️','Desierto'],['🌴','Selva'],['🗻','Volcán'],
+['🌅','Aurora'],['🌨️','Nieve'],['🌧️','Lluvia'],['🍂','Otoño'],['🌲','Bosque'],
+['🏞️','Río'],['🪸','Coral'],['🦪','Perla'],['🥇','Oro'],['🥈','Plata'],
+['🥉','Bronce'],['💠','Diamante'],['♦️','Rubí'],['💚','Esmeralda'],['🔷','Zafiro'],
+['🔮','Amatista'],['🪨','Obsidiana'],['🌡️','Magma'],['🩶','Ceniza'],['💨','Humo'],
+['🌫️','Niebla'],['🌑','Eclipse'],['☄️','Cometa'],['🌠','Meteorito'],['🌌','Nebulosa'],
+['💥','Supernova'],['🕳️','Agujero Negro'],['🦄','Unicornio'],['🔥','Fénix'],['🦁','Grifo'],
+['🐍','Quimera'],['🦁','Esfinge'],['😈','Demonio'],['👼','Ángel'],['🧙','Bruja'],
+['🧛','Vampiro'],['🐺','Hombre Lobo'],['🧟','Zombie'],['💀','Esqueleto'],['🤖','Robot'],
+['🦾','Cyborg'],['👽','Alien'],['🛸','OVNI'],['🔫','Láser'],['⚛️','Plasma'],
+['🧬','ADN'],['🦠','Virus'],['🍄','Hongo'],['🌼','Flor'],['🌵','Cactus'],
+['🎍','Bambú'],['🌳','Roble'],['🌸','Cerezo'],['🌻','Girasol'],['🌹','Rosa'],
+['🌷','Tulipán'],['🪷','Loto'],['🍀','Trébol'],['🍃','Hoja'],['🌰','Semilla'],
+['👑','Corona'],['⚔️','Espada'],['🛡️','Escudo'],['🏹','Arco'],['🔨','Martillo'],
+['📜','Pergamino'],['🔯','Runa'],['🌀','Portal'],['⏳','Tiempo'],['♾️','Infinito'],
+['🧊','Cuántico'],['💻','Matrix'],['🔌','Circuito'],['🔋','Batería'],['🎆','Holograma'],
+];
+
+const VARIANT_SUFFIX = {
+  comun:['Básico','Simple','Clásico'], pocoComun:['Brillante','Vivo','Fresco'],
+  raro:['Radiante','Intenso','Puro'], epico:['Supremo','Arcano','Feroz'],
+  legendario:['Legendario','Ancestral','Eterno'], mitico:['Sagrado','Prístino'],
+  omega:['Definitivo','Absoluto'], prohibido:['Maldito','Oscuro'],
+  secreto:['Oculto'], divino:['Celestial'],
+};
+
+const RARITIES = [
+ {id:'comun',      label:'Común',       color:'#b8bec8', count:130, probMin:8,      probMax:25,     coinMin:1,    coinMax:2},
+ {id:'pocoComun',  label:'Poco Común',  color:'#5fd67a', count:110, probMin:25,     probMax:60,     coinMin:2,    coinMax:4},
+ {id:'raro',       label:'Raro',        color:'#4aa3ff', count:90,  probMin:60,     probMax:150,    coinMin:5,    coinMax:10},
+ {id:'epico',      label:'Épico',       color:'#b465ff', count:70,  probMin:150,    probMax:400,    coinMin:12,   coinMax:25},
+ {id:'legendario', label:'Legendario',  color:'#ffb347', count:50,  probMin:400,    probMax:1000,   coinMin:30,   coinMax:50},
+ {id:'mitico',     label:'Mítico',      color:'#ff5e9e', count:35,  probMin:1000,   probMax:3000,   coinMin:60,   coinMax:100},
+ {id:'omega',      label:'Omega',       color:'#00e5ff', count:22,  probMin:3000,   probMax:12000,  coinMin:150,  coinMax:350},
+ {id:'prohibido',  label:'Prohibido',   color:'#ff2b3f', count:12,  probMin:12000,  probMax:60000,  coinMin:400,  coinMax:800},
+ {id:'secreto',    label:'Secreto',     color:'#c65bff', count:6,   probMin:60000,  probMax:300000, coinMin:1000, coinMax:2500},
+ {id:'divino',     label:'Divino',      color:'#ffd700', count:3,   probMin:300000, probMax:1000000,coinMin:3000, coinMax:8000},
+];
+const RARITY_INDEX = {}; RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
+
+const ICONIC = [
+  {name:'Nubes',  themeIdx:0,  rarity:'comun',      prob:20,     coins:2},
+  {name:'Cristal',themeIdx:7,  rarity:'raro',       prob:150,    coins:10},
+  {name:'Galaxia',themeIdx:5,  rarity:'legendario', prob:800,    coins:40},
+  {name:'Dragón', themeIdx:18, rarity:'omega',      prob:8000,   coins:300},
+  {name:'Vacío',  themeIdx:19, rarity:'secreto',    prob:250000, coins:3000},
+  {name:'Divino', themeIdx:57, rarity:'divino',     prob:1000000,coins:5000},
+];
+
+function buildStyles(){
+  const styles = [];
+  const usedNames = new Set();
+  RARITIES.forEach(rar=>{
+    for(let i=0;i<rar.count;i++){
+      const t = i % THEMES.length;
+      const variant = Math.floor(i / THEMES.length);
+      const [emoji, base] = THEMES[t];
+      let name = base;
+      if(variant>0){
+        const suf = VARIANT_SUFFIX[rar.id][(variant-1) % VARIANT_SUFFIX[rar.id].length];
+        name = base + ' ' + suf;
+      }
+      let uniqueName = name;
+      let dupN = 1;
+      while(usedNames.has(uniqueName+'|'+rar.id)){ dupN++; uniqueName = name+' '+dupN; }
+      usedNames.add(uniqueName+'|'+rar.id);
+      const frac = rar.count<=1 ? 0 : i/(rar.count-1);
+      const prob = Math.max(2, Math.round(rar.probMin * Math.pow(rar.probMax/rar.probMin, frac)));
+      const coins = Math.max(1, Math.round(rar.coinMin + (rar.coinMax-rar.coinMin)*frac));
+      styles.push({
+        id: rar.id+'_'+i, name:uniqueName, emoji, rarity:rar.id, prob, coins,
+      });
+    }
+  });
+  ICONIC.forEach((ic,idx)=>{
+    const [emoji] = THEMES[ic.themeIdx];
+    styles.push({id:'iconic_'+idx, name:ic.name, emoji, rarity:ic.rarity, prob:ic.prob, coins:ic.coins, iconic:true});
+  });
+  return styles;
+}
+const STYLES = buildStyles();
+const STYLE_MAP = {}; STYLES.forEach(s=>STYLE_MAP[s.id]=s);
+const DEFAULT_STYLE = {id:'default', name:'Estándar', emoji:'⬜', rarity:'comun', prob:1, coins:1, isDefault:true};
+
+function rarityColor(id){ const r=RARITIES.find(x=>x.id===id); return r?r.color:'#b8bec8'; }
+function rarityLabel(id){ const r=RARITIES.find(x=>x.id===id); return r?r.label:id; }
+
+/* ============================= KEYBOARD LAYOUT ============================= */
+
+const LABELS = {
+  Backquote:'`', Minus:'-', Equal:'=', Backspace:'⌫', Tab:'Tab', BracketLeft:'[', BracketRight:']',
+  Backslash:'\\', CapsLock:'Caps', Semicolon:';', Quote:"'", Enter:'⏎', ShiftLeft:'Shift', ShiftRight:'Shift',
+  Comma:',', Period:'.', Slash:'/', ControlLeft:'Ctrl', ControlRight:'Ctrl', MetaLeft:'⊞', MetaRight:'⊞',
+  AltLeft:'Alt', AltRight:'Alt', Space:'', ContextMenu:'☰', Escape:'Esc',
+};
+const WIDTHS = {
+  Backspace:1.6, Tab:1.4, BracketLeft:1, BracketRight:1, Backslash:1.4, CapsLock:1.7, Enter:1.9,
+  ShiftLeft:2.1, ShiftRight:2.5, ControlLeft:1.2, ControlRight:1.2, MetaLeft:1.2, MetaRight:1.2,
+  AltLeft:1.2, AltRight:1.2, Space:5.5, ContextMenu:1.2,
+};
+function keyLabel(code){
+  if(LABELS[code]!==undefined) return LABELS[code];
+  if(code.startsWith('Digit')) return code.slice(5);
+  if(code.startsWith('Key')) return code.slice(3);
+  if(code.startsWith('F') && !isNaN(+code.slice(1))) return code;
+  return code;
+}
+
+const KB_ROWS = [
+  ['Escape','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'],
+  ['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal','Backspace'],
+  ['Tab','KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight','Backslash'],
+  ['CapsLock','KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Enter'],
+  ['ShiftLeft','KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash','ShiftRight'],
+  ['ControlLeft','MetaLeft','AltLeft','Space','AltRight','MetaRight','ContextMenu','ControlRight'],
+];
+const ALL_CODES = KB_ROWS.flat();
+
+const KEY_PRIORITY = {
+  Digit0:0, Digit1:1,Digit9:2,Digit2:3,Digit8:4,Digit3:5,Digit7:6,Digit4:7,Digit6:8,Digit5:9,
+  KeyF:10,KeyJ:11,KeyD:12,KeyK:13,KeyS:14,KeyL:15,KeyA:16,Semicolon:17,KeyG:18,KeyH:19,
+  KeyR:20,KeyU:21,KeyE:22,KeyI:23,KeyW:24,KeyO:25,KeyQ:26,KeyP:27,KeyT:28,KeyY:29,
+  KeyC:30,KeyV:31,KeyN:32,KeyM:33,KeyB:34,KeyX:35,Comma:36,KeyZ:37,Period:38,Slash:39,Space:40,
+  Enter:41,ShiftLeft:42,ShiftRight:43,Backspace:44,Tab:45,CapsLock:46,
+  ControlLeft:50,ControlRight:51,AltLeft:52,AltRight:53,
+  Minus:60,Equal:61,Backquote:62,BracketLeft:63,BracketRight:64,Backslash:65,Quote:66,
+  MetaLeft:70,MetaRight:71,ContextMenu:72,
+  F1:80,F2:81,F3:82,F4:83,F5:84,F6:85,F7:86,F8:87,F9:88,F10:89,F11:90,F12:91,Escape:92,
+};
+const UNLOCK_ORDER = ALL_CODES.slice().sort((a,b)=>{
+  const pa = KEY_PRIORITY[a] ?? (999+ALL_CODES.indexOf(a));
+  const pb = KEY_PRIORITY[b] ?? (999+ALL_CODES.indexOf(b));
+  return pa-pb;
+});
+const KEY_RANK = {}; UNLOCK_ORDER.forEach((c,i)=>KEY_RANK[c]=i);
+function keyCost(code){
+  const rank = KEY_RANK[code] || 0;
+  if(rank===0) return 0;
+  return Math.round(10 * Math.pow(1.105, rank));
+}
+
+/* ============================= STATE ============================= */
+
+const SAVE_KEY = 'keycapRngSave_v1';
+let state = null;
+
+function defaultState(){
+  const keys = {};
+  ALL_CODES.forEach(code=>{
+    keys[code] = { unlocked: code==='Digit0', styleId:'default', favorite:false, presses:0, coinsGenerated:0 };
+  });
+  const styles = {};
+  return {
+    coins: 0, totalCoinsEarned:0, totalPresses:0, playTimeSeconds:0,
+    keys, styles,
+    upgrades: { luck:0, rollDiscount:0, coinMult:0, favSlots:0 },
+    favStyles: [],
+    missionsClaimed: [],
+    achievementsUnlocked: [],
+    ownedBackgrounds: ['default'], activeBackground:'default',
+    ownedAnimations: ['classic'], activeAnimation:'classic',
+    soundMuted:false,
+    lastSave: Date.now(),
+  };
+}
+
+function loadGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    const d = defaultState();
+    const merged = Object.assign({}, d, parsed);
+    merged.keys = Object.assign({}, d.keys, parsed.keys||{});
+    merged.upgrades = Object.assign({}, d.upgrades, parsed.upgrades||{});
+    merged.styles = parsed.styles || {};
+    return merged;
+  }catch(e){ console.warn('Save corrupt, resetting', e); return defaultState(); }
+}
+function saveGame(){
+  state.lastSave = Date.now();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ console.warn('Save failed', e); }
+}
+
+function isOwned(styleId){ return !!(state.styles[styleId] && state.styles[styleId].owned); }
+function ownedStyleList(){ return STYLES.filter(s=>isOwned(s.id)); }
+function getStyle(id){ if(id==='default') return DEFAULT_STYLE; return STYLE_MAP[id]; }
+
+/* ============================= ECONOMY / UPGRADES ============================= */
+
+const UPGRADE_DEFS = {
+  luck:      { label:'Suerte', desc:'Aumenta la probabilidad de estilos raros', base:100, growth:1.6, max:15, effect:l=>`+${(l*15)}% prob. raros` },
+  rollDiscount: { label:'Descuento de tirada', desc:'Reduce el coste de cada tirada', base:150, growth:1.7, max:10, effect:l=>`-${Math.round((1-Math.pow(0.9,l))*100)}% coste` },
+  coinMult:  { label:'Multiplicador de monedas', desc:'Aumenta las monedas por pulsación', base:200, growth:1.65, max:20, effect:l=>`+${l*10}% monedas` },
+  favSlots:  { label:'Espacios de favoritos', desc:'Más espacio para estilos favoritos', base:80, growth:1.5, max:8, effect:l=>`${5+l*3} espacios` },
+};
+function upgradeCost(key){
+  const def = UPGRADE_DEFS[key]; const lvl = state.upgrades[key];
+  if(lvl>=def.max) return null;
+  return Math.round(def.base * Math.pow(def.growth, lvl));
+}
+function coinMultiplier(){ return 1 + state.upgrades.coinMult*0.10; }
+function luckFactor(){ return 1 + state.upgrades.luck*0.15; }
+function rollCost(){ return Math.max(5, Math.round(25 * Math.pow(0.9, state.upgrades.rollDiscount))); }
+function maxFavSlots(){ return 5 + state.upgrades.favSlots*3; }
+
+const BACKGROUNDS = [
+  {id:'default', label:'Nocturno', cost:0, cls:''},
+  {id:'aurora', label:'Aurora', cost:500, cls:'bg-aurora'},
+  {id:'neon', label:'Neón', cost:2000, cls:'bg-neon'},
+  {id:'espacio', label:'Espacio', cost:8000, cls:'bg-espacio'},
+  {id:'dorado', label:'Dorado', cost:30000, cls:'bg-dorado'},
+  {id:'arcano', label:'Arcano', cost:100000, cls:'bg-arcano'},
+];
+const ANIMATIONS = [
+  {id:'classic', label:'Clásica', cost:0},
+  {id:'bounce', label:'Rebote', cost:1500},
+  {id:'ripple', label:'Ondas', cost:5000},
+];
+
+/* ============================= GACHA ============================= */
+
+function rollStyle(){
+  const lf = luckFactor();
+  let total = 0;
+  const weights = STYLES.map(s=>{
+    const w = (1/s.prob) * (s.rarity==='comun' ? 1 : lf);
+    total += w;
+    return w;
+  });
+  let r = Math.random()*total;
+  for(let i=0;i<STYLES.length;i++){
+    r -= weights[i];
+    if(r<=0) return STYLES[i];
+  }
+  return STYLES[STYLES.length-1];
+}
+
+function markObtained(style){
+  const existing = state.styles[style.id];
+  if(!existing){
+    state.styles[style.id] = { owned:true, timesObtained:1, firstObtainedAt: Date.now() };
+  } else {
+    existing.owned = true;
+    existing.timesObtained = (existing.timesObtained||0)+1;
+  }
+}
+
+/* ============================= PARTICLES & AUDIO ============================= */
+
+let audioCtx = null;
+function ensureAudio(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return audioCtx; }
+
+function playClick(){
+  if(state.soundMuted) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator(); const gain = ctx.createGain();
+  osc.type='square'; osc.frequency.setValueAtTime(140+Math.random()*40, t);
+  gain.gain.setValueAtTime(0.08, t); gain.gain.exponentialRampToValueAtTime(0.001, t+0.06);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(t); osc.stop(t+0.07);
+}
+function playReveal(rarityIdx){
+  if(state.soundMuted) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  const t = ctx.currentTime;
+  const notes = rarityIdx<=2 ? [523] : rarityIdx<=5 ? [523,659,784] : [392,523,659,784,988];
+  notes.forEach((f,i)=>{
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = rarityIdx>=7?'sawtooth':'sine';
+    osc.frequency.setValueAtTime(f, t+i*0.09);
+    gain.gain.setValueAtTime(0.0001, t+i*0.09);
+    gain.gain.exponentialRampToValueAtTime(0.12, t+i*0.09+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t+i*0.09+0.35);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t+i*0.09); osc.stop(t+i*0.09+0.4);
+  });
+}
+
+const PARTICLE_CATEGORIES = [
+  {kw:['Fuego','Lava','Volcán','Magma','Fénix','Ceniza','Nuclear','Infernal'], color:'#ff7a3c', shape:'●', motion:'rise'},
+  {kw:['Hielo','Nieve','Océano','Lluvia','Coral','Perla','Río','Zafiro','Cristal','Diamante','Niebla'], color:'#6fd0ff', shape:'❄', motion:'fall'},
+  {kw:['Naturaleza','Bosque','Selva','Flor','Hoja','Trébol','Girasol','Rosa','Cerezo','Sakura','Bambú','Roble','Cactus','Loto','Tulipán'], color:'#7de08a', shape:'❁', motion:'fall'},
+  {kw:['Rayos','Tormenta','Plasma','Láser','Eléctrico'], color:'#fff96b', shape:'⚡', motion:'burst'},
+  {kw:['Galaxia','Estrellas','Planetas','Nebulosa','Supernova','Agujero Negro','Cometa','Meteorito','Eclipse','Vacío','Cuántico'], color:'#b98bff', shape:'★', motion:'orbit'},
+  {kw:['Divino','Ángel','Corona','Sol','Aurora'], color:'#ffe27a', shape:'✦', motion:'rise'},
+  {kw:['Demonio','Vampiro','Zombie','Esqueleto','Fantasma','Bruja','Hombre Lobo'], color:'#8a6bce', shape:'●', motion:'fall'},
+  {kw:['Mecánico','Robot','Cyborg','Circuito','Matrix','Batería','Holograma','ADN','Virus'], color:'#4be0ff', shape:'▪', motion:'burst'},
+];
+function classifyParticle(name, rarityColorHex){
+  for(const cat of PARTICLE_CATEGORIES){
+    if(cat.kw.some(k=>name.indexOf(k)!==-1)) return cat;
+  }
+  return {color:rarityColorHex, shape:'●', motion:'burst'};
+}
+
+function spawnParticles(x, y, style){
+  const cat = classifyParticle(style.name, rarityColor(style.rarity));
+  const layer = document.getElementById('particles-layer');
+  const n = 6;
+  for(let i=0;i<n;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = cat.shape;
+    p.style.left = x+'px'; p.style.top = y+'px';
+    p.style.color = cat.color;
+    p.style.fontSize = (10+Math.random()*10)+'px';
+    p.style.textShadow = '0 0 6px '+cat.color;
+    layer.appendChild(p);
+    const angle = (Math.random()*Math.PI*2);
+    const dist = 30+Math.random()*40;
+    let dx, dy;
+    if(cat.motion==='rise'){ dx=(Math.random()-0.5)*40; dy=-(50+Math.random()*40); }
+    else if(cat.motion==='fall'){ dx=(Math.random()-0.5)*40; dy=(50+Math.random()*40); }
+    else if(cat.motion==='orbit'){ dx=Math.cos(angle)*dist; dy=Math.sin(angle)*dist-20; }
+    else { dx=Math.cos(angle)*dist; dy=Math.sin(angle)*dist; }
+    const dur = 500+Math.random()*400;
+    p.animate([
+      {transform:'translate(0,0) scale(1) rotate(0deg)', opacity:1},
+      {transform:`translate(${dx}px,${dy}px) scale(.3) rotate(${Math.random()*180-90}deg)`, opacity:0}
+    ], {duration:dur, easing:'ease-out'});
+    setTimeout(()=>p.remove(), dur+50);
+  }
+}
+
+/* ============================= MISSIONS / ACHIEVEMENTS ============================= */
+
+function unlockedCount(){ return Object.values(state.keys).filter(k=>k.unlocked).length; }
+function maxPressesSingleKey(){ return Object.values(state.keys).reduce((m,k)=>Math.max(m,k.presses),0); }
+function upgradesBought(){ return Object.values(state.upgrades).reduce((a,b)=>a+b,0); }
+function hasRarityOwned(rarityId){
+  const minIdx = RARITY_INDEX[rarityId];
+  return STYLES.some(s=>RARITY_INDEX[s.rarity]>=minIdx && isOwned(s.id));
+}
+function ownedNonDefaultCount(){ return STYLES.filter(s=>isOwned(s.id)).length; }
+function allStylesOwned(){ return STYLES.every(s=>isOwned(s.id)); }
+function rowComplete(rowIdx){ return KB_ROWS[rowIdx].every(c=>state.keys[c].unlocked); }
+
+const MISSIONS = [
+  {id:'unlock5', label:'Desbloquea 5 teclas', target:5, reward:50, progress:s=>Math.min(5,unlockedCount())},
+  {id:'press500', label:'Pulsa una tecla 500 veces', target:500, reward:100, progress:s=>Math.min(500,maxPressesSingleKey())},
+  {id:'legendary1', label:'Consigue un estilo legendario', target:1, reward:150, progress:s=>hasRarityOwned('legendario')?1:0},
+  {id:'upgrade1', label:'Compra una mejora', target:1, reward:80, progress:s=>Math.min(1,upgradesBought())},
+  {id:'coins100k', label:'Consigue 100.000 monedas (totales)', target:100000, reward:1000, progress:s=>Math.min(100000,state.totalCoinsEarned)},
+  {id:'rowdigits', label:'Completa la fila de números', target:1, reward:200, progress:s=>rowComplete(1)?1:0},
+];
+const ACHIEVEMENTS = [
+  {id:'firstKey', label:'Primera tecla', desc:'Desbloquea tu primera tecla adicional', reward:20, check:()=>unlockedCount()>=2},
+  {id:'firstStyle', label:'Primer estilo', desc:'Consigue tu primer estilo mediante la ruleta', reward:20, check:()=>ownedNonDefaultCount()>=1},
+  {id:'firstLegendary', label:'Primera legendaria', desc:'Consigue un estilo Legendario', reward:100, check:()=>hasRarityOwned('legendario')},
+  {id:'firstOmega', label:'Primer Omega', desc:'Consigue un estilo Omega', reward:500, check:()=>hasRarityOwned('omega')},
+  {id:'allKeys', label:'Teclado completo', desc:'Desbloquea todas las teclas', reward:2000, check:()=>unlockedCount()>=ALL_CODES.length},
+  {id:'firstDivine', label:'Toque divino', desc:'Consigue un estilo Divino', reward:5000, check:()=>hasRarityOwned('divino')},
+  {id:'fullCollection', label:'Colección completa', desc:'Consigue todos los estilos existentes', reward:50000, check:()=>allStylesOwned()},
+];
+
+function checkAchievements(){
+  ACHIEVEMENTS.forEach(a=>{
+    if(!state.achievementsUnlocked.includes(a.id) && a.check()){
+      state.achievementsUnlocked.push(a.id);
+      state.coins += a.reward; state.totalCoinsEarned += a.reward;
+      toast(`🏆 Logro desbloqueado: ${a.label} (+${a.reward}🪙)`, true);
+    }
+  });
+}
+
+/* ============================= UI: TOASTS / MODALS ============================= */
+
+function toast(msg, gold){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast'+(gold?' gold':'');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 3600);
+}
+
+const overlay = document.getElementById('modal-overlay');
+function openModal(id){
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  overlay.classList.add('show');
+}
+function closeModals(){ overlay.classList.remove('show'); document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active')); }
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModals(); });
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', closeModals));
+
+/* ============================= KEYBOARD RENDER ============================= */
+
+let selectedKeyCode = null;
+
+function applyKeyVisual(el, code){
+  const k = state.keys[code];
+  el.classList.toggle('locked', !k.unlocked);
+  el.classList.toggle('favorite', !!k.favorite);
+  if(!k.unlocked){
+    el.style.removeProperty('--kt'); el.style.removeProperty('--kb'); el.style.removeProperty('--ks'); el.style.removeProperty('--glow');
+    el.removeAttribute('data-rarity');
+    const cost = keyCost(code);
+    el.classList.toggle('affordable', state.coins>=cost);
+    return;
+  }
+  el.classList.remove('affordable');
+  const style = getStyle(k.styleId) || DEFAULT_STYLE;
+  const color = rarityColor(style.rarity);
+  el.setAttribute('data-rarity', style.rarity);
+  el.style.setProperty('--glow', color);
+  if(style.isDefault){
+    el.style.setProperty('--kt', '#3a3f4b'); el.style.setProperty('--kb', '#20232d'); el.style.setProperty('--ks', '#14161b');
+  } else {
+    el.style.setProperty('--kt', shade(color, 18));
+    el.style.setProperty('--kb', shade(color, -35));
+    el.style.setProperty('--ks', shade(color, -60));
+  }
+}
+function shade(hex, pct){
+  const n = parseInt(hex.slice(1),16);
+  let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  r = Math.min(255,Math.max(0, r+ (pct/100)*255));
+  g = Math.min(255,Math.max(0, g+ (pct/100)*255));
+  b = Math.min(255,Math.max(0, b+ (pct/100)*255));
+  return `rgb(${r|0},${g|0},${b|0})`;
+}
+
+const keyElements = {};
+function buildKeyboard(){
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = '';
+  KB_ROWS.forEach(row=>{
+    const rowEl = document.createElement('div'); rowEl.className='kb-row';
+    row.forEach(code=>{
+      const el = document.createElement('div');
+      el.className = 'key'; el.dataset.code = code;
+      el.style.setProperty('--w', WIDTHS[code]||1);
+      const k = state.keys[code];
+      const style = k.unlocked ? (getStyle(k.styleId)||DEFAULT_STYLE) : null;
+      if(style && !style.isDefault && code!=='Space'){
+        el.innerHTML = `<span class="emoji">${style.emoji}</span>`;
+      } else {
+        el.textContent = keyLabel(code);
+      }
+      if(!k.unlocked){
+        const tag = document.createElement('div'); tag.className='cost-tag'; tag.textContent = keyCost(code)+'🪙';
+        el.appendChild(tag);
+      }
+      el.addEventListener('click', ()=>onKeyClick(code));
+      rowEl.appendChild(el);
+      keyElements[code]=el;
+      applyKeyVisual(el, code);
+    });
+    kb.appendChild(rowEl);
+  });
+}
+
+function onKeyClick(code){
+  const k = state.keys[code];
+  if(!k.unlocked){
+    tryUnlockKey(code);
+    return;
+  }
+  selectedKeyCode = code;
+  document.getElementById('km-title').textContent = `Tecla "${keyLabel(code)||'Espacio'}"`;
+  document.getElementById('km-fav').textContent = (k.favorite? '★ Quitar de favoritos':'⭐ Añadir a favoritos');
+  openModal('modal-key-menu');
+}
+
+function tryUnlockKey(code){
+  const cost = keyCost(code);
+  const k = state.keys[code];
+  if(state.coins < cost){ toast(`Necesitas ${cost}🪙 para desbloquear "${keyLabel(code)||'Espacio'}"`); return; }
+  state.coins -= cost; k.unlocked = true; k.styleId = 'default';
+  toast(`🔓 Tecla "${keyLabel(code)||'Espacio'}" desbloqueada!`);
+  applyKeyVisual(keyElements[code], code);
+  refreshAll();
+  saveGame();
+}
+
+document.getElementById('km-change-style').addEventListener('click', ()=>{
+  closeModals(); openStylePicker(selectedKeyCode);
+});
+document.getElementById('km-sell').addEventListener('click', ()=>{
+  const code = selectedKeyCode;
+  if(code==='Digit0'){ toast('No puedes vender la tecla inicial.'); return; }
+  closeModals();
+  confirmAction(`Vender tecla "${keyLabel(code)||'Espacio'}"`, 'Recuperarás el 50% de su coste de desbloqueo y se bloqueará de nuevo.', ()=>{
+    const refund = Math.round(keyCost(code)*0.5);
+    state.coins += refund;
+    state.keys[code].unlocked = false; state.keys[code].styleId='default'; state.keys[code].favorite=false;
+    toast(`Vendida. +${refund}🪙`);
+    refreshAll(); saveGame();
+  });
+});
+document.getElementById('km-stats').addEventListener('click', ()=>{
+  const code = selectedKeyCode; const k = state.keys[code]; const style = getStyle(k.styleId)||DEFAULT_STYLE;
+  document.getElementById('ks-title').textContent = `📊 Estadísticas de "${keyLabel(code)||'Espacio'}"`;
+  document.getElementById('ks-body').innerHTML = `
+    <div class="stat-row"><span>Estilo equipado</span><b>${style.emoji} ${style.name}</b></div>
+    <div class="stat-row"><span>Pulsaciones</span><b>${k.presses}</b></div>
+    <div class="stat-row"><span>Monedas generadas</span><b>${k.coinsGenerated}🪙</b></div>
+    <div class="stat-row"><span>Favorita</span><b>${k.favorite?'Sí':'No'}</b></div>
+  `;
+  closeModals(); openModal('modal-key-stats');
+});
+document.getElementById('km-fav').addEventListener('click', ()=>{
+  const code = selectedKeyCode; state.keys[code].favorite = !state.keys[code].favorite;
+  closeModals(); applyKeyVisual(keyElements[code], code); saveGame();
+});
+
+let confirmCb = null;
+function confirmAction(title, body, cb){
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').textContent = body;
+  confirmCb = cb;
+  openModal('modal-confirm');
+}
+document.getElementById('confirm-yes').addEventListener('click', ()=>{ closeModals(); if(confirmCb) confirmCb(); confirmCb=null; });
+
+function openStylePicker(code){
+  const grid = document.getElementById('picker-grid');
+  const search = document.getElementById('picker-search'); search.value='';
+  function render(filter){
+    grid.innerHTML = '';
+    const owned = [DEFAULT_STYLE, ...ownedStyleList()];
+    owned.filter(s=>!filter || s.name.toLowerCase().includes(filter.toLowerCase())).forEach(s=>{
+      const card = document.createElement('div');
+      card.className = 'style-card'; card.style.setProperty('--c', rarityColor(s.rarity));
+      card.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span>`;
+      card.title = `${rarityLabel(s.rarity)} · +${s.coins}🪙`;
+      card.addEventListener('click', ()=>{
+        state.keys[code].styleId = s.id;
+        closeModals(); applyKeyVisual(keyElements[code], code);
+        const el = keyElements[code];
+        if(!s.isDefault && code!=='Space'){ el.innerHTML = `<span class="emoji">${s.emoji}</span>`; } else { el.textContent = keyLabel(code); }
+        toast(`Equipado: ${s.emoji} ${s.name}`);
+        saveGame();
+      });
+      grid.appendChild(card);
+    });
+  }
+  render('');
+  search.oninput = ()=>render(search.value);
+  openModal('modal-style-picker');
+}
+
+/* ============================= INPUT HANDLING ============================= */
+
+function isTypingTarget(el){
+  return el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.isContentEditable);
+}
+
+window.addEventListener('keydown', e=>{
+  if(isTypingTarget(document.activeElement)) return;
+  const code = e.code;
+  if(!(code in state.keys)) return;
+  if(['Space','Tab','Backspace'].includes(code)) e.preventDefault();
+  const el = keyElements[code];
+  if(el) el.classList.add('pressed');
+  if(e.repeat) return;
+  const k = state.keys[code];
+  if(!k.unlocked) return;
+  const style = getStyle(k.styleId) || DEFAULT_STYLE;
+  const gain = Math.max(1, Math.round(style.coins * coinMultiplier()));
+  state.coins += gain; state.totalCoinsEarned += gain; state.totalPresses++;
+  k.presses++; k.coinsGenerated += gain;
+  playClick();
+  if(el){
+    const rect = el.getBoundingClientRect();
+    spawnParticles(rect.left+rect.width/2, rect.top+rect.height/2, style);
+  }
+  updateCoinDisplay();
+  checkMissions(); checkAchievements();
+  scheduleUIRefresh();
+});
+window.addEventListener('keyup', e=>{
+  const el = keyElements[e.code]; if(el) el.classList.remove('pressed');
+});
+
+let refreshTimer = null;
+function scheduleUIRefresh(){
+  if(refreshTimer) return;
+  refreshTimer = setTimeout(()=>{ refreshTimer=null; refreshShopAffordability(); refreshMissionsAchievements(); refreshStats(); }, 400);
+}
+
+/* ============================= COIN DISPLAY ============================= */
+let displayedCoins = 0;
+function updateCoinDisplay(){
+  const target = Math.floor(state.coins);
+  displayedCoins = target;
+  document.getElementById('coin-amount').textContent = formatNum(target);
+}
+function formatNum(n){
+  if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return n.toLocaleString('es-ES');
+  return String(n);
+}
+
+/* ============================= GACHA UI ============================= */
+
+function renderRarityTable(){
+  const table = document.getElementById('rarity-table');
+  let html = '<tr><th>Rareza</th><th>Prob. ejemplo</th><th>Monedas</th></tr>';
+  RARITIES.forEach(r=>{
+    const examples = STYLES.filter(s=>s.rarity===r.id);
+    const min = examples.reduce((m,s)=>Math.min(m,s.prob),Infinity);
+    html += `<tr><td><span class="rarity-chip" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}">${r.label}</span></td>
+      <td>1 entre ${formatNum(min)}+</td><td>+${r.coinMin}-${r.coinMax}🪙</td></tr>`;
+  });
+  table.innerHTML = html;
+}
+
+let rolling = false;
+document.getElementById('roll-btn').addEventListener('click', ()=>{
+  if(rolling) return;
+  const cost = rollCost();
+  if(state.coins < cost){ toast('No tienes suficientes monedas para tirar.'); return; }
+  state.coins -= cost; updateCoinDisplay();
+  rolling = true;
+  document.getElementById('roll-btn').disabled = true;
+  const result = rollStyle();
+  animateReel(result, ()=>{
+    markObtained(result);
+    showReveal(result);
+    rolling = false;
+    document.getElementById('roll-btn').disabled = false;
+    refreshAll(); saveGame();
+  });
+});
+
+function animateReel(result, cb){
+  const strip = document.getElementById('reel-strip');
+  strip.innerHTML=''; strip.style.transition='none'; strip.style.transform='translateX(0)';
+  const cardW = 92;
+  const N = 28;
+  for(let i=0;i<N;i++){
+    const s = STYLES[Math.floor(Math.random()*STYLES.length)];
+    strip.appendChild(makeReelCard(s));
+  }
+  strip.appendChild(makeReelCard(result));
+  const containerW = document.getElementById('reel-container').clientWidth;
+  const targetX = -(N*cardW + cardW/2 - containerW/2);
+  requestAnimationFrame(()=>{
+    strip.style.transition = 'transform 2.4s cubic-bezier(.12,.7,.15,1)';
+    strip.style.transform = `translateX(${targetX}px)`;
+  });
+  setTimeout(cb, 2500);
+}
+function makeReelCard(s){
+  const c = document.createElement('div'); c.className='reel-card';
+  c.style.borderColor = rarityColor(s.rarity);
+  c.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span>`;
+  return c;
+}
+
+function showReveal(style){
+  const rIdx = RARITY_INDEX[style.rarity];
+  document.getElementById('reveal-emoji').textContent = style.emoji;
+  document.getElementById('reveal-emoji').style.setProperty('--glow', rarityColor(style.rarity));
+  document.getElementById('reveal-glow').style.setProperty('--glow', rarityColor(style.rarity));
+  document.getElementById('reveal-name').textContent = style.name;
+  const rEl = document.getElementById('reveal-rarity');
+  rEl.textContent = rarityLabel(style.rarity);
+  rEl.style.background = rarityColor(style.rarity)+'33'; rEl.style.color = rarityColor(style.rarity); rEl.style.border = '1px solid '+rarityColor(style.rarity);
+  const already = (state.styles[style.id] && state.styles[style.id].timesObtained>1);
+  document.getElementById('reveal-stats').innerHTML = `Probabilidad: 1 entre ${formatNum(style.prob)}<br>Monedas por pulsación: +${style.coins}🪙${already? '<br><i>(Ya lo tenías — obtenido de nuevo)</i>':''}`;
+  playReveal(rIdx);
+  if(rIdx>=6){ document.body.classList.add('shaking'); setTimeout(()=>document.body.classList.remove('shaking'), 550); }
+  openModal('modal-reveal');
+  toast(`🎉 Conseguiste: ${style.emoji} ${style.name} (${rarityLabel(style.rarity)})`, rIdx>=4);
+}
+
+/* ============================= SHOP ============================= */
+
+function renderShop(){
+  const el = document.getElementById('tab-shop');
+  let html = '<h3 class="section-title">🔑 Próximas Teclas</h3><div class="shop-section" id="shop-keys"></div>';
+  html += '<h3 class="section-title">⬆️ Mejoras</h3><div class="shop-section" id="shop-upgrades"></div>';
+  html += '<h3 class="section-title">🎨 Fondos</h3><div class="shop-section" id="shop-bgs"></div>';
+  html += '<h3 class="section-title">✨ Animaciones</h3><div class="shop-section" id="shop-anims"></div>';
+  el.innerHTML = html;
+  refreshShopAffordability();
+}
+
+function refreshShopAffordability(){
+  const keysDiv = document.getElementById('shop-keys');
+  if(!keysDiv) return;
+  const locked = UNLOCK_ORDER.filter(c=>!state.keys[c].unlocked).slice(0,8);
+  keysDiv.innerHTML = locked.length? '' : '<div class="sub">¡Todas las teclas desbloqueadas!</div>';
+  locked.forEach(code=>{
+    const cost = keyCost(code);
+    const item = document.createElement('div'); item.className='shop-item';
+    item.innerHTML = `<div class="info"><b>Tecla "${keyLabel(code)||'Espacio'}"</b><span>Desbloquea esta tecla</span></div>
+      <button class="buy-btn" ${state.coins<cost?'disabled':''}>${cost}🪙</button>`;
+    item.querySelector('button').addEventListener('click', ()=>tryUnlockKey(code));
+    keysDiv.appendChild(item);
+  });
+
+  const upDiv = document.getElementById('shop-upgrades'); upDiv.innerHTML='';
+  Object.keys(UPGRADE_DEFS).forEach(key=>{
+    const def = UPGRADE_DEFS[key]; const lvl = state.upgrades[key]; const cost = upgradeCost(key);
+    const item = document.createElement('div'); item.className='shop-item';
+    const maxed = cost===null;
+    item.innerHTML = `<div class="info"><b>${def.label} (Nv. ${lvl}${maxed?' MAX':''})</b><span>${def.desc} · ${def.effect(lvl)}</span></div>
+      <button class="buy-btn" ${maxed||state.coins<cost?'disabled':''}>${maxed?'MAX':cost+'🪙'}</button>`;
+    if(!maxed){
+      item.querySelector('button').addEventListener('click', ()=>{
+        if(state.coins<cost) return;
+        state.coins -= cost; state.upgrades[key]++;
+        toast(`⬆️ ${def.label} mejorado a Nv. ${state.upgrades[key]}`);
+        refreshAll(); saveGame();
+      });
+    }
+    upDiv.appendChild(item);
+  });
+
+  const bgDiv = document.getElementById('shop-bgs'); bgDiv.innerHTML='';
+  BACKGROUNDS.forEach(bg=>{
+    const owned = state.ownedBackgrounds.includes(bg.id);
+    const active = state.activeBackground===bg.id;
+    const item = document.createElement('div'); item.className='shop-item';
+    item.innerHTML = `<div class="info"><b>${bg.label}</b><span>${owned?(active?'Activo':'Poseído'):'Cosmético de fondo'}</span></div>
+      <button class="buy-btn ${active?'owned':''}" ${(!owned && state.coins<bg.cost)?'disabled':''}>${owned?(active?'Activo':'Usar'):bg.cost+'🪙'}</button>`;
+    item.querySelector('button').addEventListener('click', ()=>{
+      if(!owned){
+        if(state.coins<bg.cost) return;
+        state.coins -= bg.cost; state.ownedBackgrounds.push(bg.id);
+      }
+      state.activeBackground = bg.id; applyBackground(); refreshAll(); saveGame();
+    });
+    bgDiv.appendChild(item);
+  });
+
+  const animDiv = document.getElementById('shop-anims'); animDiv.innerHTML='';
+  ANIMATIONS.forEach(a=>{
+    const owned = state.ownedAnimations.includes(a.id);
+    const active = state.activeAnimation===a.id;
+    const item = document.createElement('div'); item.className='shop-item';
+    item.innerHTML = `<div class="info"><b>${a.label}</b><span>${owned?(active?'Activa':'Poseída'):'Animación de pulsación'}</span></div>
+      <button class="buy-btn ${active?'owned':''}" ${(!owned && state.coins<a.cost)?'disabled':''}>${owned?(active?'Activa':'Usar'):a.cost+'🪙'}</button>`;
+    item.querySelector('button').addEventListener('click', ()=>{
+      if(!owned){
+        if(state.coins<a.cost) return;
+        state.coins -= a.cost; state.ownedAnimations.push(a.id);
+      }
+      state.activeAnimation = a.id; refreshAll(); saveGame();
+    });
+    animDiv.appendChild(item);
+  });
+}
+function applyBackground(){
+  const bg = BACKGROUNDS.find(b=>b.id===state.activeBackground) || BACKGROUNDS[0];
+  document.body.className = bg.cls;
+}
+
+/* ============================= INVENTORY / COLLECTION ============================= */
+
+function populateRarityFilters(){
+  ['inv-filter','col-filter'].forEach(id=>{
+    const sel = document.getElementById(id);
+    RARITIES.forEach(r=>{
+      const opt = document.createElement('option'); opt.value=r.id; opt.textContent=r.label; sel.appendChild(opt);
+    });
+  });
+}
+
+function renderInventory(){
+  const grid = document.getElementById('inventory-grid');
+  const search = document.getElementById('inv-search').value.toLowerCase();
+  const sortBy = document.getElementById('inv-sort').value;
+  const filterRarity = document.getElementById('inv-filter').value;
+  const favOnly = document.getElementById('inv-fav-only').checked;
+  let list = ownedStyleList().filter(s=>{
+    if(search && !s.name.toLowerCase().includes(search)) return false;
+    if(filterRarity!=='all' && s.rarity!==filterRarity) return false;
+    if(favOnly && !state.favStyles.includes(s.id)) return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    if(sortBy==='name') return a.name.localeCompare(b.name);
+    if(sortBy==='coins') return b.coins-a.coins;
+    if(sortBy==='prob') return b.prob-a.prob;
+    if(sortBy==='date') return (state.styles[b.id]?.firstObtainedAt||0)-(state.styles[a.id]?.firstObtainedAt||0);
+    return RARITY_INDEX[b.rarity]-RARITY_INDEX[a.rarity];
+  });
+  grid.innerHTML='';
+  if(list.length===0){ grid.innerHTML = '<div class="sub">Aún no tienes estilos. ¡Prueba la ruleta!</div>'; return; }
+  list.forEach(s=>{
+    const rec = state.styles[s.id];
+    const card = document.createElement('div'); card.className='style-card'; card.style.setProperty('--c', rarityColor(s.rarity));
+    const isFav = state.favStyles.includes(s.id);
+    card.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span>
+      <span class="fav-star">${isFav?'⭐':''}</span><span class="count-badge">x${rec?rec.timesObtained:1}</span>`;
+    card.title = `${rarityLabel(s.rarity)} · 1 entre ${formatNum(s.prob)} · +${s.coins}🪙`;
+    card.addEventListener('click', ()=>{
+      if(isFav){
+        state.favStyles = state.favStyles.filter(id=>id!==s.id);
+      } else {
+        if(state.favStyles.length>=maxFavSlots()){ toast('Sin espacios de favoritos libres. ¡Compra más en la Tienda!'); return; }
+        state.favStyles.push(s.id);
+      }
+      saveGame(); renderInventory();
+    });
+    grid.appendChild(card);
+  });
+}
+['inv-search','inv-sort','inv-filter'].forEach(id=>document.getElementById(id).addEventListener('input', renderInventory));
+document.getElementById('inv-fav-only').addEventListener('change', renderInventory);
+
+function renderCollection(){
+  const grid = document.getElementById('collection-grid');
+  const filterRarity = document.getElementById('col-filter').value;
+  const owned = STYLES.filter(s=>isOwned(s.id)).length;
+  document.getElementById('collection-progress').textContent = `Progreso: ${owned} / ${STYLES.length} estilos descubiertos (${((owned/STYLES.length)*100).toFixed(1)}%)`;
+  let list = STYLES.filter(s=> filterRarity==='all' || s.rarity===filterRarity);
+  list.sort((a,b)=>RARITY_INDEX[a.rarity]-RARITY_INDEX[b.rarity] || a.prob-b.prob);
+  grid.innerHTML='';
+  list.forEach(s=>{
+    const owned = isOwned(s.id);
+    const rec = state.styles[s.id];
+    const card = document.createElement('div'); card.className='style-card'+(owned?'':' locked');
+    card.style.setProperty('--c', owned? rarityColor(s.rarity) : '#3a3d4a');
+    if(owned){
+      card.innerHTML = `<span class="e">${s.emoji}</span><span class="n">${s.name}</span><span class="count-badge">x${rec.timesObtained}</span>`;
+      card.title = `${rarityLabel(s.rarity)} · 1 entre ${formatNum(s.prob)} · +${s.coins}🪙`;
+    } else {
+      card.innerHTML = `<span class="e">❔</span><span class="n">???</span>`;
+      card.title = `${rarityLabel(s.rarity)} · 1 entre ${formatNum(s.prob)}`;
+    }
+    grid.appendChild(card);
+  });
+}
+document.getElementById('col-filter').addEventListener('change', renderCollection);
+
+/* ============================= MISSIONS / ACHIEVEMENTS UI ============================= */
+
+function checkMissions(){ /* progress computed on render; nothing to mutate here besides achievements */ }
+
+function renderMissions(){
+  const list = document.getElementById('missions-list');
+  list.innerHTML = '';
+  MISSIONS.forEach(m=>{
+    const progress = m.progress();
+    const done = progress>=m.target;
+    const claimed = state.missionsClaimed.includes(m.id);
+    const div = document.createElement('div'); div.className='mission-item'+(done?' done':'');
+    div.innerHTML = `<div><b>${m.label}</b></div><div class="sub">${progress} / ${m.target} · Recompensa: ${m.reward}🪙</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,(progress/m.target)*100)}%"></div></div>
+      <button class="claim-btn" ${(!done||claimed)?'disabled':''}>${claimed?'Reclamado':'Reclamar'}</button>`;
+    div.querySelector('button').addEventListener('click', ()=>{
+      if(!done || claimed) return;
+      state.missionsClaimed.push(m.id); state.coins += m.reward; state.totalCoinsEarned += m.reward;
+      toast(`🎯 Misión completada: ${m.label} (+${m.reward}🪙)`, true);
+      refreshAll(); saveGame();
+    });
+    list.appendChild(div);
+  });
+}
+function renderAchievements(){
+  const list = document.getElementById('achievements-list');
+  list.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const done = state.achievementsUnlocked.includes(a.id);
+    const div = document.createElement('div'); div.className='ach-item'+(done?' done':'');
+    div.innerHTML = `<div><b>${done?'🏆':'🔒'} ${a.label}</b></div><div class="sub">${a.desc} · +${a.reward}🪙</div>`;
+    list.appendChild(div);
+  });
+}
+function refreshMissionsAchievements(){ renderMissions(); renderAchievements(); }
+
+/* ============================= STATS ============================= */
+
+function mostUsedKey(){
+  let best=null, bestVal=-1;
+  Object.entries(state.keys).forEach(([code,k])=>{ if(k.presses>bestVal){ bestVal=k.presses; best=code; } });
+  return best && bestVal>0 ? `${keyLabel(best)||'Espacio'} (${bestVal})` : '—';
+}
+function favoriteStyleStat(){
+  let best=null, bestVal=-1;
+  Object.entries(state.styles).forEach(([id,rec])=>{ if(rec.timesObtained>bestVal){ bestVal=rec.timesObtained; best=id; } });
+  const s = best ? getStyle(best) : null;
+  return s ? `${s.emoji} ${s.name} (x${bestVal})` : '—';
+}
+function highestRarityOwned(){
+  let bestIdx=-1;
+  STYLES.forEach(s=>{ if(isOwned(s.id) && RARITY_INDEX[s.rarity]>bestIdx) bestIdx=RARITY_INDEX[s.rarity]; });
+  return bestIdx>=0 ? RARITIES[bestIdx].label : '—';
+}
+function formatTime(sec){
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  return `${h}h ${m}m ${s}s`;
+}
+function refreshStats(){
+  const el = document.getElementById('stats-list');
+  el.innerHTML = `
+    <div class="stat-row"><span>Monedas actuales</span><b>${formatNum(Math.floor(state.coins))}🪙</b></div>
+    <div class="stat-row"><span>Monedas totales generadas</span><b>${formatNum(state.totalCoinsEarned)}🪙</b></div>
+    <div class="stat-row"><span>Pulsaciones totales</span><b>${state.totalPresses}</b></div>
+    <div class="stat-row"><span>Tecla más usada</span><b>${mostUsedKey()}</b></div>
+    <div class="stat-row"><span>Estilo favorito</span><b>${favoriteStyleStat()}</b></div>
+    <div class="stat-row"><span>Mayor rareza conseguida</span><b>${highestRarityOwned()}</b></div>
+    <div class="stat-row"><span>Tiempo jugado</span><b>${formatTime(state.playTimeSeconds)}</b></div>
+    <div class="stat-row"><span>Teclas desbloqueadas</span><b>${unlockedCount()} / ${ALL_CODES.length}</b></div>
+    <div class="stat-row"><span>Estilos obtenidos</span><b>${ownedNonDefaultCount()} / ${STYLES.length}</b></div>
+  `;
+}
+
+/* ============================= TABS ============================= */
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='inventory') renderInventory();
+    if(btn.dataset.tab==='collection') renderCollection();
+    if(btn.dataset.tab==='missions'||btn.dataset.tab==='achievements') refreshMissionsAchievements();
+    if(btn.dataset.tab==='stats') refreshStats();
+  });
+});
+
+/* ============================= GLOBAL REFRESH ============================= */
+
+function refreshAll(){
+  checkAchievements();
+  ALL_CODES.forEach(code=>applyKeyVisual(keyElements[code], code));
+  updateCoinDisplay();
+  refreshShopAffordability();
+  document.getElementById('roll-cost-label').textContent = `Coste de tirada: ${rollCost()}🪙`;
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  if(activeTab==='inventory') renderInventory();
+  if(activeTab==='collection') renderCollection();
+  if(activeTab==='missions'||activeTab==='achievements') refreshMissionsAchievements();
+  if(activeTab==='stats') refreshStats();
+}
+
+/* ============================= MUTE ============================= */
+document.getElementById('mute-btn').addEventListener('click', ()=>{
+  state.soundMuted = !state.soundMuted;
+  document.getElementById('mute-btn').textContent = state.soundMuted ? '🔇' : '🔊';
+  saveGame();
+});
+
+/* ============================= INIT ============================= */
+
+function init(){
+  state = loadGame();
+  document.getElementById('mute-btn').textContent = state.soundMuted ? '🔇' : '🔊';
+  applyBackground();
+  buildKeyboard();
+  renderRarityTable();
+  renderShop();
+  populateRarityFilters();
+  renderInventory();
+  renderCollection();
+  renderMissions();
+  renderAchievements();
+  refreshStats();
+  updateCoinDisplay();
+  document.getElementById('roll-cost-label').textContent = `Coste de tirada: ${rollCost()}🪙`;
+
+  setInterval(()=>{ state.playTimeSeconds++; }, 1000);
+  setInterval(saveGame, 8000);
+  window.addEventListener('beforeunload', saveGame);
+  setInterval(()=>{ ALL_CODES.forEach(c=>{ if(!state.keys[c].unlocked) applyKeyVisual(keyElements[c], c); }); }, 2000);
+}
+init();
+
+})();
+</script>
+</body>
+</html>
