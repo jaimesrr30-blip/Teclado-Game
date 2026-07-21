@@ -438,6 +438,7 @@ body.shaking #app{animation: screenShake .5s ease;}
     <div id="coin-display"><span class="coin-icon">🪙</span><span id="coin-amount">0</span></div>
     <div style="display:flex; gap:8px;">
       <button class="icon-btn" id="mute-btn" title="Silenciar sonido">🔊</button>
+      <button class="icon-btn" id="settings-btn" title="Ajustes">⚙️</button>
     </div>
   </header>
 
@@ -566,6 +567,13 @@ body.shaking #app{animation: screenShake .5s ease;}
     <p id="confirm-body" class="sub"></p>
     <button class="menu-btn danger" id="confirm-yes">Sí, confirmar</button>
     <button class="menu-btn" data-close>Cancelar</button>
+  </div>
+
+  <div class="modal" id="modal-settings" style="position:relative;">
+    <button class="modal-close" data-close>✕</button>
+    <h2>⚙️ Ajustes</h2>
+    <p class="sub">Herramientas de prueba / trucos para probar el juego libremente.</p>
+    <button class="menu-btn" id="settings-add-coins">🪙 Añadir 1.000.000 de monedas</button>
   </div>
 </div>
 
@@ -1681,6 +1689,15 @@ document.getElementById('mute-btn').addEventListener('click', ()=>{
   state.soundMuted = !state.soundMuted;
   document.getElementById('mute-btn').textContent = state.soundMuted ? '🔇' : '🔊';
   saveGame();
+});
+
+/* ============================= SETTINGS ============================= */
+document.getElementById('settings-btn').addEventListener('click', ()=>{ openModal('modal-settings'); });
+document.getElementById('settings-add-coins').addEventListener('click', ()=>{
+  state.coins += 1000000; state.totalCoinsEarned += 1000000;
+  toast('🪙 +1.000.000 monedas añadidas', true);
+  updateCoinDisplay();
+  refreshAll(); saveGame();
 });
 
 /* ============================= INIT ============================= */
